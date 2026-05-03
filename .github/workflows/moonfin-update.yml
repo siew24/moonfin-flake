@@ -1,0 +1,98 @@
+name: Update Moonfin
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *"
+
+jobs:
+  update-moonfin:
+    name: Update Moonfin
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Check if update is needed
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          .github/update.sh --ci --only-check
+
+      - name: Install Nix
+        if: steps.check.outputs.should_update == 'true'
+        # TODO: they're @ v31 so next time let's try DeterminateSystems/nix-installer-action@main
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixpkgs-unstable
+
+      - name: Setup Nix Magic Cache
+        if: steps.check.outputs.should_update == 'true'
+        uses: DeterminateSystems/flakehub-cache-action@main
+
+      - name: Update versions
+        id: update
+        if: steps.check.outputs.should_update == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MAX_RETRIES=3
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "::group::Attempt $attempt/$MAX_RETRIES"
+
+            if .github/update.sh --ci; then
+              echo "::endgroup::"
+              echo "::notice::Update successful on attempt $attempt"
+              exit 0
+            fi
+
+            EXIT_CODE=$?
+            echo "::endgroup::"
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "::warning::Attempt $attempt failed. Cleaning up and retrying..."
+              git checkout HEAD -- . && git clean -fd
+              sleep $((attempt * 5))
+            else
+              echo "::error::All $MAX_RETRIES attempts failed"
+              exit $EXIT_CODE
+            fi
+          done
+
+      - name: Commit changes
+        id: commit
+        if: steps.check.outputs.should_update == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "${{ steps.update.outputs.commit_message }}"
+          file_pattern: "*"
+    outputs:
+      success: ${{ steps.update.outputs.should_update }}
+
+  test-build:
+    if: needs.update-moonfin.outputs.success == 'true'
+    continue-on-error: false
+    name: Test package build
+    runs-on: ubuntu-latest
+    needs: update-moonfin
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixpkgs-unstable
+
+      - name: Setup Nix Magic Cache
+        uses: DeterminateSystems/flakehub-cache-action@main
+
+      - name: Build packages
+        run: |
+          for package in $(nix flake show --json 2>/dev/null | jq -r '.packages.["x86_64-linux"] | keys | .[]'); do
+              nix build --system 'x86_64-linux' ".#$package"
+          done

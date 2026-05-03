@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "linux": {
+      "version": "1.4.0",
+      "sha1": "9cc916f0c0bc57cb85919c1ca943e40593ee6ba9",
+      "url": "https://github.com/Moonfin-Client/Mobile-Desktop/releases/download/1.4.0/Moonfin_Linux_v1.4.0.tar.gz",
+      "sha256": "sha256-55SeW7LHIF76DEWDzxv3GGjYL99ssAj9MIVYRhQN6nQ="
+    }
+  }
+}
