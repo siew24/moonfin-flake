@@ -82,14 +82,19 @@ update_version() {
     semver=$(resolve_semver)
     updated_at="$remote"
     target_release_name="$semver"
-    download_url="https://github.com/Moonfin-Client/Mobile-Desktop/releases/download/$target_release_name/Moonfin_Linux_v$target_release_name.tar.gz"
+    download_url="https://api.github.com/repos/Moonfin-Client/Mobile-Desktop/zipball/refs/tags/$target_release_name"
     prefetch_output=$(nix store prefetch-file --unpack --hash-type sha256 --json "$download_url")
     sha256=$(echo "$prefetch_output" | jq -r '.hash')
 
     jq ".variants[\"$os\"] = {\"version\":\"$semver\",\"sha1\":\"$remote_sha1\",\"url\":\"$download_url\",\"sha256\":\"$sha256\"}" <sources.json >sources.json.tmp
     mv sources.json.tmp sources.json
 
-    echo "Updated to $semver"
+    echo "Updated to $semver. Downloading pubspec.lock locally..."
+
+    pubspec_url="https://raw.githubusercontent.com/Moonfin-Client/Mobile-Desktop/$target_release_name/pubspec.lock"
+    wget -O - $pubspec_url | yj > pubspec.lock.json
+
+    echo "Updated pubspec.lock.json."
 
     if ! $ci; then
         return
@@ -109,7 +114,7 @@ main() {
     fi
 
     # Check if there are changes
-    if ! git diff --exit-code >/dev/null; then
+    if $ci && ! git diff --exit-code >/dev/null; then
         # Prepare commit message
         init_message="chore(update):"
         message="$init_message"
