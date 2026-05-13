@@ -4,6 +4,7 @@
   pkgs,
   makeDesktopItem,
   fetchFromGitHub,
+  copyDesktopItems,
   flutter,
 }:
 let
@@ -36,6 +37,8 @@ flutter.buildFlutterApplication {
     startupNotify = true;
     terminal = false;
   };
+
+  nativeBuildInputs = [ copyDesktopItems ];
 
   buildInputs = with pkgs; [
     alsa-lib
@@ -80,5 +83,6 @@ flutter.buildFlutterApplication {
     description = "Enhanced Jellyfin & Emby client for mobile, tablet, and desktop";
     homepage = "https://github.com/Moonfin-Client/Mobile-Desktop";
     changelog = "https://github.com/Moonfin-Client/Mobile-Desktop/releases";
+    license = lib.licenses.gpl3;
   };
 }
