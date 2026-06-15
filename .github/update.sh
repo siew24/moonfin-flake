@@ -10,7 +10,7 @@ if echo "$@" | grep -qoE '(--only-check)'; then
     only_check=true
 fi
 
-remote_tags=$(curl 'https://api.github.com/repos/Moonfin-Client/Mobile-Desktop/tags' -s)
+remote_tags=$(curl 'https://api.github.com/repos/Moonfin-Client/Moonfin-Core/tags' -s)
 
 with_retry() {
     retries=5
@@ -82,7 +82,7 @@ update_version() {
     semver=$(resolve_semver)
     updated_at="$remote"
     target_release_name="$semver"
-    download_url="https://api.github.com/repos/Moonfin-Client/Mobile-Desktop/zipball/refs/tags/$target_release_name"
+    download_url="https://api.github.com/repos/Moonfin-Client/Moonfin-Core/zipball/refs/tags/$target_release_name"
     prefetch_output=$(nix store prefetch-file --unpack --hash-type sha256 --json "$download_url")
     sha256=$(echo "$prefetch_output" | jq -r '.hash')
 
@@ -91,7 +91,7 @@ update_version() {
 
     echo "Updated to $semver. Downloading pubspec.lock locally..."
 
-    pubspec_url="https://raw.githubusercontent.com/Moonfin-Client/Mobile-Desktop/$target_release_name/pubspec.lock"
+    pubspec_url="https://raw.githubusercontent.com/Moonfin-Client/Moonfin-Core/$target_release_name/pubspec.lock"
     wget -O - $pubspec_url | yj > pubspec.lock.json
 
     echo "Updated pubspec.lock.json."
