@@ -73,6 +73,8 @@ flutter341.buildFlutterApplication {
     libvdpau
   ];
 
+  dontPatch = true;
+
   # postPatch = ''
   #   substituteInPlace linux/CMakeLists.txt \
   #     --replace-fail 'target_compile_options(''${TARGET} PRIVATE -Wall -Werror)' 'target_compile_options(''${TARGET} PRIVATE -Wall -Werror -Wno-deprecated)'
