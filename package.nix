@@ -5,20 +5,19 @@
   makeDesktopItem,
   fetchFromGitHub,
   copyDesktopItems,
-  flutter,
+  flutter341,
 }:
 let
   pname = "moonfin";
   version = variant.version;
   pubspecLock = lib.importJSON ./pubspec.lock.json;
-
 in
-flutter.buildFlutterApplication {
+flutter341.buildFlutterApplication {
   inherit pname version pubspecLock;
 
   src = fetchFromGitHub {
     owner = "Moonfin-Client";
-    repo = "Mobile-Desktop";
+    repo = "Moonfin-Core";
     rev = variant.sha1;
     hash = variant.sha256;
   };
@@ -74,15 +73,15 @@ flutter.buildFlutterApplication {
     libvdpau
   ];
 
-  postPatch = ''
-    substituteInPlace linux/CMakeLists.txt \
-      --replace-fail 'target_compile_options(''${TARGET} PRIVATE -Wall -Werror)' 'target_compile_options(''${TARGET} PRIVATE -Wall -Werror -Wno-deprecated)'
-  '';
+  # postPatch = ''
+  #   substituteInPlace linux/CMakeLists.txt \
+  #     --replace-fail 'target_compile_options(''${TARGET} PRIVATE -Wall -Werror)' 'target_compile_options(''${TARGET} PRIVATE -Wall -Werror -Wno-deprecated)'
+  # '';
 
   meta = {
     description = "Enhanced Jellyfin & Emby client for mobile, tablet, and desktop";
-    homepage = "https://github.com/Moonfin-Client/Mobile-Desktop";
-    changelog = "https://github.com/Moonfin-Client/Mobile-Desktop/releases";
+    homepage = "https://github.com/Moonfin-Client/Moonfin-Core";
+    changelog = "https://github.com/Moonfin-Client/Moonfin-Core/releases";
     license = lib.licenses.gpl3;
   };
 }
