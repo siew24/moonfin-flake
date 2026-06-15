@@ -46,12 +46,15 @@ let
         ];
       };
 
-      testScript = /* python */ ''
+      testScript = ''
+        machine.wait_for_unit("multi-user.target")
+        machine.wait_for_unit("home-manager-testuser.service")
         ${suite.testScript}
       '';
     };
 
   suites = {
+    "default" = ./default-install.nix;
   };
 in
 pkgs.lib.mapAttrs (name: path: mkGenericTest name path) suites

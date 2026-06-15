@@ -3,7 +3,7 @@ name: Update Moonfin
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 0 * * *"
 
 jobs:
   update-moonfin:
@@ -36,8 +36,8 @@ jobs:
       - name: Install script dependencies
         if: steps.check.outputs.should_update == 'true'
         run: |
-          wget -O /usr/bin/yj https://github.com/sclevine/yj/releases/download/v5.1.0/yj-linux-amd64
-          chmod +x /usr/bin/yj
+          wget -O $RUNNER_TOOL_CACHE/yj https://github.com/sclevine/yj/releases/download/v5.1.0/yj-linux-amd64
+          chmod +x $RUNNER_TOOL_CACHE/yj
 
       - name: Update versions
         id: update

@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    systems.url = "github:nix-systems/default";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -14,19 +15,14 @@
     {
       self,
       nixpkgs,
+      systems,
       home-manager,
     }:
     let
-      linuxSystems = [ "x86_64-linux" ];
-
-      supportedSystems = linuxSystems;
-
-      forAllSystems =
-        f: nixpkgs.lib.genAttrs supportedSystems (system: f nixpkgs.legacyPackages.${system});
-
+      eachSystem = f: nixpkgs.lib.genAttrs (import systems) (system: f nixpkgs.legacyPackages.${system});
     in
     {
-      packages = forAllSystems (
+      packages = eachSystem (
         pkgs:
         import ./default.nix {
           inherit
@@ -35,7 +31,7 @@
         }
       );
 
-      checks = nixpkgs.lib.genAttrs linuxSystems (
+      checks = nixpkgs.lib.genAttrs (import systems) (
         system:
         import ./tests {
           inherit self home-manager;
@@ -43,7 +39,8 @@
         }
       );
 
-      # homeModules = {
-      # };
+      homeModules = {
+        latest = import ./hm-module { inherit self home-manager; };
+      };
     };
 }
