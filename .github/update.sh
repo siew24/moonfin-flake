@@ -114,7 +114,7 @@ main() {
     fi
 
     # Check if there are changes
-    if $ci && ! git diff --exit-code >/dev/null; then
+    if ! git diff --exit-code >/dev/null; then
         # Prepare commit message
         init_message="chore(update):"
         message="$init_message"

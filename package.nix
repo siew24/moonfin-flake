@@ -1,19 +1,23 @@
 {
   lib,
+  stdenv,
   variant,
   pkgs,
   makeDesktopItem,
   fetchFromGitHub,
   copyDesktopItems,
-  flutter341,
+  flutter,
+  pdfium-binaries,
 }:
 let
   pname = "moonfin";
   version = variant.version;
   pubspecLock = lib.importJSON ./pubspec.lock.json;
 in
-flutter341.buildFlutterApplication {
+flutter.buildFlutterApplication {
   inherit pname version pubspecLock;
+
+  flutterMode = "release";
 
   src = fetchFromGitHub {
     owner = "Moonfin-Client";
@@ -71,14 +75,32 @@ flutter341.buildFlutterApplication {
     nv-codec-headers-12
     libva
     libvdpau
+    webkitgtk_4_1
   ];
 
-  dontPatch = true;
+  customSourceBuilders = {
+    sqlite3_flutter_libs =
+      { version, src, ... }:
 
-  # postPatch = ''
-  #   substituteInPlace linux/CMakeLists.txt \
-  #     --replace-fail 'target_compile_options(''${TARGET} PRIVATE -Wall -Werror)' 'target_compile_options(''${TARGET} PRIVATE -Wall -Werror -Wno-deprecated)'
-  # '';
+      stdenv.mkDerivation {
+        pname = "sqlite3_flutter_libs";
+        inherit version src;
+        inherit (src) passthru;
+
+        postPatch = ''
+          mkdir -p linux
+          cp ${./CMakeLists.txt} linux/CMakeLists.txt
+        '';
+
+        installPhase = ''
+          runHook preInstall
+
+          cp -r . $out
+
+          runHook postInstall
+        '';
+      };
+  };
 
   meta = {
     description = "Enhanced Jellyfin & Emby client for mobile, tablet, and desktop";
