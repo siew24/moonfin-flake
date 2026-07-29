@@ -1,10 +1,10 @@
 {
   "variants": {
     "linux": {
-      "version": "2.2.0",
-      "sha1": "4d8e73305b774291c8a7eab6f81bb51dbdc0ab62",
-      "url": "https://api.github.com/repos/Moonfin-Client/Moonfin-Core/zipball/refs/tags/2.2.0",
-      "sha256": "sha256-7HL2LzUskjlud4xr9I0LVpYoSjaxu1kAm9PU+ibThrE="
+      "version": "2.3.1",
+      "sha1": "33c53cbfdf80c109676f2497beeff7a3c401412f",
+      "url": "https://api.github.com/repos/Moonfin-Client/Moonfin-Core/zipball/refs/tags/2.3.1",
+      "sha256": "sha256-Hb0G79pYfM69lE+q++P9KBYih4YEEv5oWk2nldhTrTI="
     }
   }
 }
