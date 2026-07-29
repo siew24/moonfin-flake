@@ -86,7 +86,7 @@ jobs:
           COMMIT_MESSAGE: "${{ steps.update.outputs.commit_message }}"
         run: |
           git add .
-          git commit -m $COMMIT_MESSAGE
+          git commit -m "$COMMIT_MESSAGE"
           git push
     outputs:
       success: ${{ steps.update.outputs.should_update }}
