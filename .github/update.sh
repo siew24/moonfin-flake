@@ -96,12 +96,112 @@ update_version() {
 
     echo "Updated pubspec.lock.json."
 
+    update_git_hashes
+
     if ! $ci; then
         return
     fi
 
     updated=true
     commit_version="$semver"
+}
+
+# Nix's own "give me a wrong hash and I will tell you the right one" trick. We
+# go through nixpkgs fetchgit rather than nix-prefetch-git on purpose: pub2nix
+# fetches these with fetchgit's defaults (submodules included), and a prefetch
+# tool with different defaults yields a different NAR and the build then fails
+# on a hash mismatch. Sourcing nixpkgs from our own flake input keeps it
+# identical to whatever package.nix will use.
+FAKE_HASH="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+
+prefetch_git_hash() {
+    _url=$1
+    _rev=$2
+    _out=$(nix build --no-link --impure --expr "
+      let
+        flake = builtins.getFlake \"path:$PWD\";
+        pkgs = flake.inputs.nixpkgs.legacyPackages.\${builtins.currentSystem};
+      in
+      pkgs.fetchgit {
+        name = \"prefetch-git-hash\";
+        url = \"$_url\";
+        rev = \"$_rev\";
+        hash = \"$FAKE_HASH\";
+      }
+    " 2>&1) || true
+    echo "$_out" | awk '/got:/ { print $2; exit }'
+}
+
+# pubspec.lock can point at git repos rather than pub.dev. Those need a Nix
+# hash each or pub2nix refuses to evaluate. Upstream switched media_kit to a
+# fork in 2.5.0 and that is exactly how main ended up unbuildable.
+update_git_hashes() {
+    echo "Scanning pubspec.lock.json for git-sourced dependencies..."
+
+    command -v jq >/dev/null 2>&1 || { echo "ERROR: jq is required by update_git_hashes" >&2; exit 1; }
+    command -v nix >/dev/null 2>&1 || { echo "ERROR: nix is required by update_git_hashes" >&2; exit 1; }
+
+
+    entries=$(jq -r '
+        .packages
+        | to_entries[]
+        | select(.value.source == "git")
+        | [.key, .value.description.url, .value.description."resolved-ref"]
+        | @tsv
+    ' pubspec.lock.json)
+
+    if [ $? -ne 0 ]; then
+        echo "ERROR: jq failed to read pubspec.lock.json" >&2
+        exit 1
+    fi
+
+    if [ -z "$entries" ]; then
+        # A parse that finds nothing when git sources plainly exist means the
+        # lock schema moved. Writing {} there would silently reintroduce the
+        # very bug this function exists to prevent.
+        if grep -qE '"source": ?"git"' pubspec.lock.json; then
+            echo "ERROR: pubspec.lock.json has git sources but none parsed." >&2
+            echo "Refusing to write an empty git-hashes.json." >&2
+            exit 1
+        fi
+        printf '{}\n' >git-hashes.json
+        echo "No git-sourced dependencies. Wrote an empty git-hashes.json."
+        return
+    fi
+
+    acc=$(mktemp)
+    seen=$(mktemp)
+    printf '{}' >"$acc"
+    : >"$seen"
+
+    while IFS="$(printf '\t')" read -r name url rev; do
+        [ -z "$name" ] && continue
+
+        # Several packages commonly share one repo and rev. Fetch it once.
+        hash=$(awk -v k="$url@$rev" '$1 == k { print $2; exit }' "$seen")
+        if [ -z "$hash" ]; then
+            echo "  prefetching $name <- $url @ $rev"
+            hash=$(prefetch_git_hash "$url" "$rev")
+            if [ -z "$hash" ]; then
+                echo "ERROR: could not determine a hash for $name ($url @ $rev)" >&2
+                rm -f "$acc" "$seen"
+                exit 1
+            fi
+            printf '%s %s\n' "$url@$rev" "$hash" >>"$seen"
+        else
+            echo "  reusing hash for $name (same repo and rev)"
+        fi
+
+        jq --arg n "$name" --arg h "$hash" '. + {($n): $h}' "$acc" >"$acc.tmp"
+        mv "$acc.tmp" "$acc"
+    done <<ENTRIES
+$entries
+ENTRIES
+
+    jq -S '.' "$acc" >git-hashes.json
+    rm -f "$acc" "$seen"
+    echo "Wrote git-hashes.json:"
+    cat git-hashes.json
 }
 
 main() {
