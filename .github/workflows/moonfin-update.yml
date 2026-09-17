@@ -79,38 +79,31 @@ jobs:
             fi
           done
 
+      # Flakes only see files git tracks, so a freshly generated git-hashes.json
+      # is invisible to `nix build` until it is staged.
+      - name: Stage changes
+        if: steps.check.outputs.should_update == 'true'
+        run: git add -A
+
+      # This gates the push. It used to be a separate `test-build` job keyed on
+      # `needs.update-moonfin.outputs.success`, which read
+      # `steps.update.outputs.should_update` -- an output update.sh only ever
+      # writes on the --only-check path, never on the --ci run that step makes.
+      # The condition was therefore always false and the job never ran once, so
+      # a broken update reached main unchecked. That is how 2.5.1 shipped
+      # unbuildable.
+      - name: Build packages
+        if: steps.check.outputs.should_update == 'true'
+        run: |
+          for package in $(nix flake show --json 2>/dev/null | jq -r '.packages.["x86_64-linux"] | keys | .[]'); do
+              nix build --system 'x86_64-linux' ".#$package"
+          done
+
       - name: Commit changes
         id: commit
         if: steps.check.outputs.should_update == 'true'
         env:
           COMMIT_MESSAGE: "${{ steps.update.outputs.commit_message }}"
         run: |
-          git add .
           git commit -m "$COMMIT_MESSAGE"
           git push
-    outputs:
-      success: ${{ steps.update.outputs.should_update }}
-
-  test-build:
-    if: needs.update-moonfin.outputs.success == 'true'
-    continue-on-error: false
-    name: Test package build
-    runs-on: ubuntu-latest
-    needs: update-moonfin
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          nix_path: nixpkgs=channel:nixpkgs-unstable
-
-      - name: Setup Nix Magic Cache
-        uses: DeterminateSystems/flakehub-cache-action@main
-
-      - name: Build packages
-        run: |
-          for package in $(nix flake show --json 2>/dev/null | jq -r '.packages.["x86_64-linux"] | keys | .[]'); do
-              nix build --system 'x86_64-linux' ".#$package"
-          done
