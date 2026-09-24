@@ -96,6 +96,14 @@ update_version() {
 
     echo "Updated pubspec.lock.json."
 
+    # Upstream raises its Dart/Flutter floor with some releases (2.6.0 moved to
+    # Dart 3.13 while our pinned nixpkgs still shipped 3.12), so take a fresh
+    # nixpkgs with every release. This must run before update_git_hashes: the
+    # prefetch reads nixpkgs from this flake's lock, and the build has to see the
+    # same fetchgit.
+    echo "Updating the nixpkgs input..."
+    nix flake update nixpkgs
+
     update_git_hashes
 
     if ! $ci; then
