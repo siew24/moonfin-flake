@@ -2,9 +2,9 @@
   "variants": {
     "linux": {
       "version": "2.7.0",
-      "sha1": "ecdb5893e0ecca1e1069694ea073880d0e46100e",
+      "sha1": "36ed696f1d02ba240b459e953d98965ae514648c",
       "url": "https://api.github.com/repos/Moonfin-Client/Moonfin-Core/zipball/refs/tags/2.7.0",
-      "sha256": "sha256-z/tXX/b0iqUUU7uhLEIn4uTWKlFUfjZxvXwqdFl5G+w="
+      "sha256": "sha256-fbc3ZKe/6/3Wik+GzEvpkYGxkOEdHIC84O4BcU7Ho+A="
     }
   }
 }
